@@ -80,7 +80,7 @@ for _ in range(10):
     stop_condition = False
     decoded_translation = ''
     while not stop_condition :
-        dec_outputs , h , c = dec_model.predict([ empty_target_seq ] + states_values )
+        dec_outputs , h , c , h2 , c2 = dec_model.predict([ empty_target_seq ] + states_values )
         sampled_word_index = np.argmax( dec_outputs[0, -1, :] )
         sampled_word = None
         for word , index in t.word_index.items() :
@@ -93,6 +93,6 @@ for _ in range(10):
 
         empty_target_seq = np.zeros( ( 1 , 1 ) )
         empty_target_seq[ 0 , 0 ] = sampled_word_index
-        states_values = [ h , c ]
+        states_values = [ h , c , h2 , c2]
 
     print( decoded_translation )

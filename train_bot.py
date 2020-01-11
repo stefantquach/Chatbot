@@ -71,13 +71,18 @@ embedding_matrix = np.load('./data/embedding_matrix.npy')
 embedding = layers.Embedding(vocab_size, 200, mask_zero=True, weights=[embedding_matrix], trainable=False, name='shared_embedding')
 
 encoder_input = layers.Input(shape=(None, ), name='encoder_input')
-encoder_lstm = layers.LSTM(200, return_state=True, name='encoder_lstm')
+encoder_lstm = layers.LSTM(200, return_state=True, return_sequences=True, name='encoder_lstm')
+encoder_lstm2 = layers.LSTM(200, return_state=True, name='encoder_lstm2')
 encoder_output , state_h1, state_c1 = encoder_lstm(embedding(encoder_input))
+encoder_output , state_h2, state_c2 = encoder_lstm2(encoder_output)
 encoder_states = [state_h1, state_c1]
+encoder_states2 = [state_h2, state_c2]
 
 decoder_input = layers.Input(shape=(None, ), name='decoder_input')
 decoder_lstm = layers.LSTM(200, return_state=True, return_sequences=True, name='decoder_lstm')
+decoder_lstm2 = layers.LSTM(200, return_state=True, return_sequences=True, name='decoder_lstm2')
 decoder_output, _, _ = decoder_lstm(embedding(decoder_input), initial_state=encoder_states)
+decoder_output, _, _ = decoder_lstm2(decoder_output, initial_state=encoder_states2)
 decoder_hidden = layers.Dense(vocab_size/2, activation='relu', name='decoder_hidden')
 decoder_dense = layers.Dense(vocab_size, activation='softmax', name='decoder_dense')
 output = decoder_dense(decoder_hidden(decoder_output))
@@ -85,26 +90,32 @@ output = decoder_dense(decoder_hidden(decoder_output))
 train_model = models.Model([encoder_input, decoder_input], output)
 train_model.compile(optimizer=tf.keras.optimizers.RMSprop(), loss='categorical_crossentropy')
 
-train_model.fit([encoder_input_data , decoder_input_data], decoder_output_data, batch_size=50, epochs=75 )
-train_model.save( './models/training_model.h5' )
-# train_model.load_weights('training_model.h5')
+# train_model.fit([encoder_input_data , decoder_input_data], decoder_output_data, batch_size=50, epochs=75 )
+# train_model.save( './models/training_model.h5' )
+train_model.load_weights('./models/training_model.h5')
 
 ### Building inference model
-encoder_model = models.Model(encoder_input, encoder_states)
+encoder_model = models.Model(encoder_input, encoder_states+encoder_states2)
 encoder_model.save('./models/encoder_model.h5')
 
 decoder_state_input_h = layers.Input(shape=( 200 ,))
 decoder_state_input_c = layers.Input(shape=( 200 ,))
+decoder_state_input_h2 = layers.Input(shape=( 200 ,))
+decoder_state_input_c2 = layers.Input(shape=( 200 ,))
 decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
+decoder_states_inputs2 = [decoder_state_input_h2, decoder_state_input_c2]
 
 # decoder_embedding = layers.Embedding(vocab_size, 200, weights=[embedding_matrix], trainable=False, name='decoder_embedding')
 decoder_outputs, state_h, state_c = decoder_lstm(
     embedding(decoder_input) , initial_state=decoder_states_inputs)
+decoder_outputs, state_h2, state_c2 = decoder_lstm2(
+    decoder_outputs , initial_state=decoder_states_inputs2)
 decoder_states = [state_h, state_c]
+decoder_states2 = [state_h2, state_c2]
 decoder_outputs = decoder_dense(decoder_hidden(decoder_outputs))
 decoder_model = tf.keras.models.Model(
-    [decoder_input] + decoder_states_inputs,
-    [decoder_outputs] + decoder_states)
+    [decoder_input] + decoder_states_inputs + decoder_states_inputs2,
+    [decoder_outputs] + decoder_states + decoder_states2)
 
 decoder_model.save('./models/decoder_model.h5')
 
