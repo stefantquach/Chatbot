@@ -10,6 +10,8 @@ import re
 import h5py
 
 regex = '(?<! )(?=[.,!?()])|(?<=[.,!?()])(?! )'
+enc_model_path = './models/encoder_model.h5'
+dec_model_path = './models/decoder_model.h5'
 # vocab_size=1912
 #
 # # import tokenizer
@@ -68,7 +70,7 @@ def create_inference_model(path_enc, path_dec):
     return encoder_model , decoder_model
 
 
-enc_model , dec_model = create_inference_model('./encoder_model.h5', './decoder_model.h5')
+enc_model , dec_model = create_inference_model(enc_model_path, dec_model_path)
 
 for _ in range(10):
     states_values = enc_model.predict( str_to_tokens( input( 'Enter question : ' ) ) )

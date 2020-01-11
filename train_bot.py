@@ -78,22 +78,20 @@ encoder_states = [state_h1, state_c1]
 decoder_input = layers.Input(shape=(None, ), name='decoder_input')
 decoder_lstm = layers.LSTM(200, return_state=True, return_sequences=True, name='decoder_lstm')
 decoder_output, _, _ = decoder_lstm(embedding(decoder_input), initial_state=encoder_states)
-# decoder_merge = layers.concatenate([encoder_output, decoder_output], axis=1, name='merge_layer')
-
-# decoder_hidden = layers.Dense(vocab_size/2, activation='relu', name='decoder_hidden')
+decoder_hidden = layers.Dense(vocab_size/2, activation='relu', name='decoder_hidden')
 decoder_dense = layers.Dense(vocab_size, activation='softmax', name='decoder_dense')
-output = decoder_dense(decoder_output)
+output = decoder_dense(decoder_hidden(decoder_output))
 
 train_model = models.Model([encoder_input, decoder_input], output)
 train_model.compile(optimizer=tf.keras.optimizers.RMSprop(), loss='categorical_crossentropy')
 
-train_model.fit([encoder_input_data , decoder_input_data], decoder_output_data, batch_size=50, epochs=50 )
-train_model.save( 'training_model.h5' )
+train_model.fit([encoder_input_data , decoder_input_data], decoder_output_data, batch_size=50, epochs=75 )
+train_model.save( './models/training_model.h5' )
 # train_model.load_weights('training_model.h5')
 
 ### Building inference model
 encoder_model = models.Model(encoder_input, encoder_states)
-encoder_model.save('encoder_model.h5')
+encoder_model.save('./models/encoder_model.h5')
 
 decoder_state_input_h = layers.Input(shape=( 200 ,))
 decoder_state_input_c = layers.Input(shape=( 200 ,))
@@ -103,12 +101,12 @@ decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
 decoder_outputs, state_h, state_c = decoder_lstm(
     embedding(decoder_input) , initial_state=decoder_states_inputs)
 decoder_states = [state_h, state_c]
-decoder_outputs = decoder_dense(decoder_outputs)
+decoder_outputs = decoder_dense(decoder_hidden(decoder_outputs))
 decoder_model = tf.keras.models.Model(
     [decoder_input] + decoder_states_inputs,
     [decoder_outputs] + decoder_states)
 
-decoder_model.save('decoder_model.h5')
+decoder_model.save('./models/decoder_model.h5')
 
 
 # def str_to_tokens( sentence : str ):
